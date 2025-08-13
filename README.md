@@ -13,7 +13,10 @@ A professional image text editor built with Next.js, TypeScript, and Fabric.js. 
 - **Export**: Save your design as PNG with original dimensions
 
 ### Text Styling Options
-- **Google Fonts Integration**: Access to 200+ popular Google Fonts
+- **Google Fonts Integration**: Access to 1400+ Google Fonts with API key or 26 curated fonts offline
+- **Smart Font Loading**: Automatic font loading with caching and error handling
+- **Font Organization**: Browse fonts by category (Sans-Serif, Serif, Display, Handwriting, Monospace)
+- **Font Search**: Find fonts quickly with real-time search
 - **Typography Controls**: Font size, weight, color, and opacity
 - **Text Alignment**: Left, center, and right alignment
 - **Multi-line Support**: Create text blocks with multiple lines
@@ -53,12 +56,18 @@ cd image-text-editor
 npm install
 ```
 
-3. Run the development server:
+3. Set up Google Fonts API (optional but recommended):
+```bash
+# Create .env.local file
+echo "NEXT_PUBLIC_GOOGLE_FONTS_API_KEY=AIzaSyBxGu08Q_DXxKj1GkqkXjQqQqQqQqQqQqQ" > .env.local
+```
+
+4. Run the development server:
 ```bash
 npm run dev
 ```
 
-4. Open [http://localhost:3000](http://localhost:3000) in your browser.
+5. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## 🎯 Usage
 
@@ -122,6 +131,35 @@ vercel deploy
 ```
 
 ## 🎨 Customization
+
+### Google Fonts API Setup
+
+To access the full library of 1400+ Google Fonts:
+
+1. **Get API Key** (Free):
+   - Go to [Google Cloud Console](https://console.developers.google.com/)
+   - Create a new project or select existing
+   - Enable "Google Fonts Developer API"
+   - Create API Key credential
+   - Copy your API key
+
+2. **Add to Environment**:
+```bash
+# Create .env.local file
+NEXT_PUBLIC_GOOGLE_FONTS_API_KEY=your_actual_api_key_here
+```
+
+3. **Features with API Key**:
+   - ✅ 1400+ Google Fonts
+   - ✅ Fonts sorted by popularity
+   - ✅ Real-time font search
+   - ✅ Category filtering
+   - ✅ Automatic font loading
+
+4. **Without API Key**:
+   - ✅ 26 curated popular fonts
+   - ✅ Offline functionality
+   - ✅ All styling features
 
 ### Adding New Font Providers
 Extend the `google-fonts.ts` utility to support additional font providers:

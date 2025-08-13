@@ -9,7 +9,7 @@ import { Slider } from '@/components/ui/slider';
 import { Textarea } from '@/components/ui/textarea';
 import { HexColorPicker } from 'react-colorful';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { loadGoogleFonts, loadFont } from '@/lib/google-font';
+import { loadGoogleFonts, loadFont, getOrganizedFonts, searchFonts, preloadPopularFonts } from '@/lib/google-font';
 import { GoogleFont } from '@/lib/types';
 import { Palette, AlignLeft, AlignCenter, AlignRight, RotateCcw, RotateCw } from 'lucide-react';
 
@@ -42,14 +42,32 @@ const FONT_WEIGHTS = [
 
 export const PropertiesPanel = ({ selectedObjectData, onUpdateText }: PropertiesPanelProps) => {
 	const [fonts, setFonts] = useState<GoogleFont[]>([]);
+	const [organizedFonts, setOrganizedFonts] = useState<{[key: string]: GoogleFont[]}>({});
 	const [fontsLoading, setFontsLoading] = useState(true);
+	const [fontSearchQuery, setFontSearchQuery] = useState('');
+	const [selectedCategory, setSelectedCategory] = useState('all');
 	const [color, setColor] = useState('#000000');
 
 	useEffect(() => {
-		loadGoogleFonts().then((loadedFonts: GoogleFont[]) => {
-			setFonts(loadedFonts);
-			setFontsLoading(false);
-		});
+		const loadFonts = async () => {
+			try {
+				console.log('🔄 Loading Google Fonts with API key...');
+				const loadedFonts = await loadGoogleFonts();
+				console.log(`✅ Loaded ${loadedFonts.length} fonts total`);
+				
+				setFonts(loadedFonts);
+				setOrganizedFonts(getOrganizedFonts(loadedFonts));
+				setFontsLoading(false);
+
+				// Preload popular fonts in the background
+				preloadPopularFonts(loadedFonts).catch(console.warn);
+			} catch (error) {
+				console.error('Failed to load fonts:', error);
+				setFontsLoading(false);
+			}
+		};
+
+		loadFonts();
 	}, []);
 
 	useEffect(() => {
@@ -78,6 +96,25 @@ export const PropertiesPanel = ({ selectedObjectData, onUpdateText }: Properties
 		onUpdateText({ fill: newColor });
 	};
 
+	// Get filtered fonts based on search and category
+	const getFilteredFonts = () => {
+		let filteredFonts = fonts;
+
+		// Filter by category
+		if (selectedCategory !== 'all') {
+			filteredFonts = organizedFonts[selectedCategory] || [];
+		}
+
+		// Filter by search query
+		if (fontSearchQuery.trim()) {
+			filteredFonts = searchFonts(filteredFonts, fontSearchQuery);
+		}
+
+		return filteredFonts;
+	};
+
+	const filteredFonts = getFilteredFonts();
+
 	return (
 		<div className="w-80 bg-white border-l border-gray-200 p-4 overflow-y-auto">
 			<h3 className="font-semibold text-lg mb-4">Text Properties</h3>
@@ -98,22 +135,70 @@ export const PropertiesPanel = ({ selectedObjectData, onUpdateText }: Properties
 				{/* Font Family */}
 				<div>
 					<Label>Font Family</Label>
+					
+					{/* Font Category Filter */}
+					<div className="flex gap-2 mt-1 mb-2">
+						<Select value={selectedCategory} onValueChange={setSelectedCategory}>
+							<SelectTrigger className="flex-1">
+								<SelectValue placeholder="Category" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="all">All Categories</SelectItem>
+								<SelectItem value="sans-serif">Sans Serif</SelectItem>
+								<SelectItem value="serif">Serif</SelectItem>
+								<SelectItem value="display">Display</SelectItem>
+								<SelectItem value="handwriting">Handwriting</SelectItem>
+								<SelectItem value="monospace">Monospace</SelectItem>
+							</SelectContent>
+						</Select>
+					</div>
+
+					{/* Font Search */}
+					<Input
+						placeholder="Search fonts..."
+						value={fontSearchQuery}
+						onChange={(e) => setFontSearchQuery(e.target.value)}
+						className="mb-2"
+					/>
+
+					{/* Font Selection */}
 					<Select value={selectedObjectData.fontFamily} onValueChange={handleFontChange}>
-						<SelectTrigger className="mt-1">
+						<SelectTrigger>
 							<SelectValue placeholder="Select font..." />
 						</SelectTrigger>
 						<SelectContent className="max-h-60">
 							{fontsLoading ? (
-								<SelectItem value="loading" disabled>Loading fonts...</SelectItem>
+								<SelectItem value="loading" disabled>
+									🔄 Loading {process.env.NEXT_PUBLIC_GOOGLE_FONTS_API_KEY ? '1400+' : '26'} fonts...
+								</SelectItem>
+							) : filteredFonts.length === 0 ? (
+								<SelectItem value="no-results" disabled>
+									No fonts found for "{fontSearchQuery}"
+								</SelectItem>
 							) : (
-								fonts.map((font) => (
+								filteredFonts.map((font) => (
 									<SelectItem key={font.family} value={font.family}>
-										<span style={{ fontFamily: font.family }}>{font.family}</span>
+										<div className="flex items-center justify-between w-full">
+											<span style={{ fontFamily: font.family }}>{font.family}</span>
+											<span className="text-xs text-gray-400 ml-2 capitalize">
+												{font.category}
+											</span>
+										</div>
 									</SelectItem>
 								))
 							)}
 						</SelectContent>
 					</Select>
+					
+					{!fontsLoading && (
+						<div className="text-xs text-gray-500 mt-1">
+							{filteredFonts.length} of {fonts.length} fonts
+							{process.env.NEXT_PUBLIC_GOOGLE_FONTS_API_KEY ? 
+								' (Google Fonts API)' : 
+								' (Offline mode)'
+							}
+						</div>
+					)}
 				</div>
 
 				{/* Font Size */}
